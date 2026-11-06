@@ -1,0 +1,19 @@
+[HOT · 85] Priya Raman — Brightleaf Home · priya@brightleaf-home.example
+  why: service fit: inventory, shopify, sync; urgency language; budget named (~3,000); substantive message
+  summary (mock): [mock] Priya Raman (Brightleaf Home) wrote via contact-form. Rule triage: hot (score 85; service fit: inventory, shopify, sync; urgency language; budget named (~3,000); substantive message).
+  draft reply (HUMAN REVIEWS BEFORE SENDING): Hi Priya Raman, thanks for getting in touch. We'd be glad to look at this — could you share a little more about your current setup and timeline? Happy to set up a short call this week.
+
+[NURTURE · 25] Tom Ellison — Ellison Outfitters · tom@ellisonoutfitters.example
+  why: service fit: automation, klaviyo; substantive message
+  summary (mock): [mock] Tom Ellison (Ellison Outfitters) wrote via contact-form. Rule triage: nurture (score 25; service fit: automation, klaviyo; substantive message).
+  draft reply (HUMAN REVIEWS BEFORE SENDING): Hi Tom Ellison, thanks for getting in touch. We'd be glad to look at this — could you share a little more about your current setup and timeline? Happy to set up a short call this week.
+
+[HOT · 70] Dana Whitfield — Whitfield Digital (agency) · dana@agency-partner.example
+  why: service fit: shopify, theme; urgency language; came via referral; substantive message
+  summary (mock): [mock] Dana Whitfield (Whitfield Digital (agency)) wrote via referral. Rule triage: hot (score 70; service fit: shopify, theme; urgency language; came via referral; substantive message).
+  draft reply (HUMAN REVIEWS BEFORE SENDING): Hi Dana Whitfield, thanks for getting in touch. We'd be glad to look at this — could you share a little more about your current setup and timeline? Happy to set up a short call this week.
+
+[SPAM · 0] (no name) — =HYPERLINK("https://evil.example","SEO Blast") · winner@seo-blast.example
+  why: spam phrases in message; 3+ links in message; no sender name; prompt-injection phrasing in message
+  summary (mock): [mock] The sender (=HYPERLINK("https://evil.example","SEO Blast")) wrote via contact-form. Rule triage: spam (score 0; spam phrases in message; 3+ links in message; no sender name; prompt-injection phrasing in message).
+  ⚠ message contained prompt-injection phrasing — treat with care
