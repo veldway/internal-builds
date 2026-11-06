@@ -1,0 +1,13 @@
+Acme Outdoor Supply (sample) — weekly report, Week 45 (2026-11-02 to 2026-11-08)
+
+Revenue: USD 2,369.80   Orders: 13   AOV: USD 182.29
+Sessions: 4,210   Conversion: 0.31%
+
+[mock narrative] This run used --mock, so the summary below comes from the deterministic template rather than the model. Acme Outdoor Supply (sample) took 13 orders for USD 2,369.80 in Week 45 (up 12.6% week-over-week). Average order value was USD 182.29 (up 3.9% week-over-week). The strongest product was 65L Trekking Pack (4 units, USD 1,156.00).
+
+Top products:
+  - 65L Trekking Pack: 4 units, USD 1,156.00
+  - 2-Person Trail Tent: 6 units, USD 779.40
+  - LED Camp Lantern: 6 units, USD 192.00
+  - Mini Camp Stove: 2 units, USD 170.00
+  - Insulated Bottle 1L: 1 units, USD 42.50
