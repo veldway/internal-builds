@@ -148,17 +148,24 @@ def fallback_prose(lead: dict[str, Any], verdict: dict[str, Any]) -> tuple[str, 
 
 
 def _split(text: str) -> tuple[str, str]:
+    """Split a model answer into (summary, reply), tracking the current section
+    explicitly: models sometimes write "REPLY:" with the text starting on the
+    NEXT line (observed live with llama-3.1 on 2026-11-06), and the old
+    falsy-empty check mis-filed those lines into the summary."""
     summary, reply = "", ""
+    mode = None
     for part in text.splitlines():
         stripped = part.strip()
         if stripped.upper().startswith("SUMMARY:"):
             summary = stripped[8:].strip()
+            mode = "summary"
         elif stripped.upper().startswith("REPLY:"):
             reply = stripped[6:].strip()
-        elif reply:
-            reply += " " + stripped
-        elif summary and stripped:
-            summary += " " + stripped
+            mode = "reply"
+        elif stripped and mode == "reply":
+            reply = f"{reply} {stripped}".strip()
+        elif stripped and mode == "summary":
+            summary = f"{summary} {stripped}".strip()
     return summary, reply
 
 

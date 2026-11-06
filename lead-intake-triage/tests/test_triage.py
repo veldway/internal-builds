@@ -231,3 +231,21 @@ class EndToEndTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SplitAnswerTest(unittest.TestCase):
+    def test_reply_text_on_the_next_line_is_not_misfiled_into_summary(self):
+        # Observed live (llama-3.1, 2026-11-06): "REPLY:" alone on its line,
+        # the reply starting on the next. The old falsy-empty check appended
+        # those lines to the summary and left the reply empty.
+        text = ('SUMMARY: T from C is inquiring about Klaviyo flows.\n\n'
+                'REPLY: \n"Hi T, thank you for reaching out. More details?"')
+        summary, reply = summarize._split(text)
+        self.assertTrue(summary.startswith("T from C"))
+        self.assertNotIn("thank you for reaching out", summary)
+        self.assertIn("thank you for reaching out", reply)
+
+    def test_reply_before_summary_keeps_both_sections(self):
+        summary, reply = summarize._split("REPLY: Hello there.\nSUMMARY: A short note.")
+        self.assertEqual(reply, "Hello there.")
+        self.assertEqual(summary, "A short note.")
