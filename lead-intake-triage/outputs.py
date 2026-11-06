@@ -20,8 +20,10 @@ CRM_COLUMNS = ("id", "received_at", "category", "score", "name", "email", "compa
                "website", "source", "budget", "reasons", "summary", "suggested_reply",
                "prose_source")
 
+# \t and \n stay (legitimate whitespace; csv quotes them, notifications need \n);
+# \r is escaped because a carriage return can overwrite a terminal line.
 _CONTROLS = re.compile(
-    "[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f"
+    "[\u0000-\u0008\u000b-\u000d\u000e-\u001f\u007f-\u009f"
     "​-‏‪-‮⁦-⁩]")
 
 

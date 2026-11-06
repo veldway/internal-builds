@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"input file not found: {args.input}")
     except json.JSONDecodeError as err:
         raise SystemExit(f"input is not valid JSON: {err}")
-    leads = data.get("leads")
+    leads = data.get("leads") if isinstance(data, dict) else None
     if not isinstance(leads, list) or not leads:
         raise SystemExit("input has no 'leads' list")
 

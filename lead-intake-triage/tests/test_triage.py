@@ -160,6 +160,9 @@ class OutputsTest(unittest.TestCase):
         self.assertNotIn("‮", cleaned)
         self.assertIn("\\u001b", cleaned)
         self.assertIn("\\u202e", cleaned)
+        # CR could overwrite a terminal line; \n and \t are legitimate and stay.
+        self.assertEqual(outputs.clean_text("a\rb"), "a\\u000db")
+        self.assertEqual(outputs.clean_text("a\nb\tc"), "a\nb\tc")
 
     def test_crm_row_sanitises_the_hostile_sample(self):
         spam = lead_by_id("L-2004")
@@ -194,6 +197,13 @@ class EndToEndTest(unittest.TestCase):
         self.assertNotIn("\x1b", csv_text)
         self.assertNotIn("\x1b", notes)
         self.assertIn("[HOT", notes)
+
+    def test_bare_list_json_is_refused_cleanly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = pathlib.Path(tmp, "bare.json")
+            src.write_text("[1, 2, 3]", encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                triage.main([str(src), "--out", tmp, "--mock"])
 
     def test_duplicate_ids_skip_but_batch_survives(self):
         data = json.loads(SAMPLE.read_text(encoding="utf-8"))
