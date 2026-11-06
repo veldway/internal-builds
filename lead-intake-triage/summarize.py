@@ -12,6 +12,7 @@ treated as plain text for human review (see outputs.py for the sanitisation).
 """
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import os
@@ -118,15 +119,19 @@ def _ollama(prompt: str, host: str) -> str:
 
 
 def ollama_host() -> str | None:
-    """The local Ollama server's base URL, or None when nothing answers."""
-    host = os.environ.get("OLLAMA_HOST", OLLAMA_DEFAULT)
+    """The local Ollama server's base URL, or None when nothing answers.
+
+    The probe must never crash the triage: a malformed OLLAMA_HOST (whitespace,
+    control characters, a bad port) reads as "no server", not as an exception.
+    """
+    host = os.environ.get("OLLAMA_HOST", "").strip() or OLLAMA_DEFAULT
     if not host.startswith("http"):
         host = "http://" + host
     try:
         with urllib.request.urlopen(f"{host.rstrip('/')}/api/tags", timeout=1) as resp:
             resp.read(1)
         return host
-    except OSError:
+    except (OSError, ValueError, http.client.HTTPException):
         return None
 
 

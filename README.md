@@ -10,5 +10,5 @@ client results.
 
 | Demo | What it automates |
 |---|---|
-| [weekly-client-report](weekly-client-report/) | A store's weekly numbers → metrics → plain-English narrative (Claude API with deterministic fallback) → HTML + text report, optionally emailed |
+| [weekly-client-report](weekly-client-report/) | A store's weekly numbers → metrics → plain-English narrative (Claude → Ollama → deterministic fallback) → HTML + text report, optionally emailed |
 | [lead-intake-triage](lead-intake-triage/) | An inbox of raw leads → rule-scored triage (hot/qualified/nurture/spam) → CRM-ready CSV + per-lead notification with a human-reviewed draft reply (Claude → Ollama → deterministic fallback; injection-hardened) |

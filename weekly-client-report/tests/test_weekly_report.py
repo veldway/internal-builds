@@ -108,18 +108,46 @@ class NarrateTest(unittest.TestCase):
         self.assertEqual((src1, src2), ("mock", "mock"))
         self.assertIn("[mock narrative]", one)
 
-    def test_no_api_key_falls_back(self):
+    def test_no_api_key_and_no_ollama_falls_back(self):
         m = metrics.compute(sample_data())
-        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}):
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}), \
+             mock.patch.object(narrate, "ollama_host", return_value=None):
             text, source = narrate.narrative(m)
         self.assertEqual(source, "fallback")
         self.assertIn(str(m["orders"]), text)
+
+    def test_no_key_with_ollama_uses_ollama(self):
+        m = metrics.compute(sample_data())
+        answer = {"response": "A steady week: revenue rose and orders held."}
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}), \
+             mock.patch.object(narrate, "ollama_host",
+                               return_value="http://localhost:11434"), \
+             mock.patch.object(narrate, "_post_json", return_value=answer) as post:
+            text, source = narrate.narrative(m)
+        self.assertEqual(source, "ollama")
+        self.assertEqual(text, answer["response"])
+        self.assertIn("/api/generate", post.call_args[0][0])
+
+    def test_claude_failure_tries_ollama_then_fallback(self):
+        m = metrics.compute(sample_data())
+        boom = urllib.error.URLError("connection refused")
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}), \
+             mock.patch.object(narrate, "_post_json", side_effect=boom) as post, \
+             mock.patch.object(narrate, "ollama_host",
+                               return_value="http://localhost:11434"), \
+             mock.patch.object(narrate.time, "sleep"):
+            text, source = narrate.narrative(m)
+        self.assertEqual(source, "fallback")
+        # Claude retried RETRIES times, then Ollama retried RETRIES times.
+        self.assertEqual(post.call_count, narrate.RETRIES * 2)
+        self.assertTrue(text)
 
     def test_api_failure_falls_back_after_retries(self):
         m = metrics.compute(sample_data())
         boom = urllib.error.URLError("connection refused")
         with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}), \
-             mock.patch.object(narrate, "_request", side_effect=boom) as fake, \
+             mock.patch.object(narrate, "_post_json", side_effect=boom) as fake, \
+             mock.patch.object(narrate, "ollama_host", return_value=None), \
              mock.patch.object(narrate.time, "sleep") as slept:
             text, source = narrate.narrative(m)
         self.assertEqual(source, "fallback")
@@ -131,7 +159,8 @@ class NarrateTest(unittest.TestCase):
         m = metrics.compute(sample_data())
         err = urllib.error.HTTPError("url", 401, "unauthorized", None, None)
         with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "bad-key"}), \
-             mock.patch.object(narrate, "_request", side_effect=err) as fake, \
+             mock.patch.object(narrate, "_post_json", side_effect=err) as fake, \
+             mock.patch.object(narrate, "ollama_host", return_value=None), \
              mock.patch.object(narrate.time, "sleep"):
             _, source = narrate.narrative(m)
         self.assertEqual(source, "fallback")
@@ -153,11 +182,44 @@ class NarrateTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}), \
              mock.patch.object(narrate.urllib.request, "urlopen",
                                return_value=EndlessResponse()) as fake, \
+             mock.patch.object(narrate, "ollama_host", return_value=None), \
              mock.patch.object(narrate.time, "sleep"):
             text, source = narrate.narrative(m)
         self.assertEqual(source, "fallback")
         self.assertEqual(fake.call_count, narrate.RETRIES)
         self.assertTrue(text)
+
+    def test_ollama_host_answers_and_normalises(self):
+        class Answer:
+            def read(self, n):
+                return b"{"
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        with mock.patch.dict(os.environ, {"OLLAMA_HOST": "myhost:11434"}), \
+             mock.patch.object(narrate.urllib.request, "urlopen",
+                               return_value=Answer()) as up:
+            self.assertEqual(narrate.ollama_host(), "http://myhost:11434")
+        self.assertEqual(up.call_args[0][0], "http://myhost:11434/api/tags")
+
+    def test_ollama_host_down_or_misconfigured_is_none(self):
+        with mock.patch.object(narrate.urllib.request, "urlopen",
+                               side_effect=OSError("down")):
+            self.assertIsNone(narrate.ollama_host())
+        # A control character in OLLAMA_HOST raises http.client.InvalidURL before
+        # any connection; the probe must read that as "no server", not crash.
+        with mock.patch.dict(os.environ, {"OLLAMA_HOST": "my host:11434"}):
+            self.assertIsNone(narrate.ollama_host())
+        # Whitespace-only falls back to the default host.
+        with mock.patch.dict(os.environ, {"OLLAMA_HOST": "   "}), \
+             mock.patch.object(narrate.urllib.request, "urlopen",
+                               side_effect=OSError("down")) as up:
+            self.assertIsNone(narrate.ollama_host())
+        self.assertTrue(up.call_args[0][0].startswith("http://localhost:11434"))
 
     def test_fallback_mentions_flags(self):
         m = metrics.compute(sample_data())

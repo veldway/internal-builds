@@ -132,6 +132,18 @@ class ProviderChainTest(unittest.TestCase):
         self.assertEqual(source, "fallback")
         self.assertIn("spam", reply)
 
+    def test_ollama_host_misconfigured_env_is_none(self):
+        # A control character in OLLAMA_HOST raises http.client.InvalidURL before
+        # any connection; the probe must read that as "no server", not crash.
+        with mock.patch.dict(os.environ, {"OLLAMA_HOST": "my host:11434"}):
+            self.assertIsNone(summarize.ollama_host())
+        # Whitespace-only falls back to the default host.
+        with mock.patch.dict(os.environ, {"OLLAMA_HOST": "   "}), \
+             mock.patch.object(summarize.urllib.request, "urlopen",
+                               side_effect=OSError("down")) as up:
+            self.assertIsNone(summarize.ollama_host())
+        self.assertTrue(up.call_args[0][0].startswith("http://localhost:11434"))
+
     def test_oversized_body_is_bounded(self):
         class Endless:
             def read1(self, n):

@@ -14,7 +14,7 @@ escape payloads) kept in to demonstrate the hardening below.
 ```bash
 python3 triage.py sample_data/leads_inbox.json --out out/          # Claude API → Ollama → fallback
 python3 triage.py sample_data/leads_inbox.json --out out/ --mock  # fully offline, deterministic
-python3 -m unittest discover -s tests                             # 21 tests
+python3 -m unittest discover -s tests                             # 22 tests
 ```
 
 No dependencies beyond stock Python 3.11. Output is local files only (`crm_rows.csv`,

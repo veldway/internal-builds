@@ -1,15 +1,17 @@
 """Turn computed metrics into a short plain-English narrative.
 
-Three paths, in order of preference:
-  1. Claude API when ANTHROPIC_API_KEY is set (and --mock not given),
-  2. --mock: a canned narrative for deterministic test runs,
-  3. fallback: a template narrative built only from the metrics.
+Provider chain, most capable first, never a hard failure:
+  1. Claude API      — when ANTHROPIC_API_KEY is set,
+  2. Ollama          — when a local server answers (OLLAMA_HOST or localhost:11434),
+  3. fallback        — a deterministic template narrative built only from the metrics.
+Plus --mock: a canned narrative for deterministic test runs.
 
-The pipeline NEVER fails because the model is unreachable: any API problem is
-logged and the fallback narrative is used, so the client still gets a report.
+The pipeline NEVER fails because a model is unreachable: any provider problem is
+logged and the next path is used, so the client still gets a report.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import os
@@ -20,8 +22,9 @@ from typing import Any
 
 log = logging.getLogger("weekly-report")
 
-API_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 MODEL = "claude-sonnet-5-5"
+OLLAMA_DEFAULT = "http://localhost:11434"
 TIMEOUT_S = 30          # socket-level timeout per read/connect
 TOTAL_DEADLINE_S = 60   # wall-clock bound for the whole request, body included
 MAX_BODY_BYTES = 1_000_000
@@ -38,53 +41,39 @@ Metrics:
 {metrics}"""
 
 
-def _request(payload: bytes, api_key: str) -> dict[str, Any]:
-    req = urllib.request.Request(
-        API_URL,
-        data=payload,
-        headers={
-            "content-type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-        },
-        method="POST",
-    )
+def _bounded_read(resp) -> bytes:
     # A socket timeout resets on every byte, so a trickling server could hold a
     # plain read() open indefinitely. Bound the whole body by wall clock and size.
     deadline = time.monotonic() + TOTAL_DEADLINE_S
     chunks: list[bytes] = []
     size = 0
+    while True:
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"response body exceeded the {TOTAL_DEADLINE_S}s deadline")
+        chunk = resp.read1(65536) if hasattr(resp, "read1") else resp.read(65536)
+        if not chunk:
+            return b"".join(chunks)
+        size += len(chunk)
+        if size > MAX_BODY_BYTES:
+            raise ValueError(f"response body exceeded {MAX_BODY_BYTES} bytes")
+        chunks.append(chunk)
+
+
+def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                 headers={"content-type": "application/json", **headers},
+                                 method="POST")
     with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
-        while True:
-            if time.monotonic() > deadline:
-                raise TimeoutError(f"response body exceeded the {TOTAL_DEADLINE_S}s deadline")
-            chunk = resp.read1(65536) if hasattr(resp, "read1") else resp.read(65536)
-            if not chunk:
-                break
-            size += len(chunk)
-            if size > MAX_BODY_BYTES:
-                raise ValueError(f"response body exceeded {MAX_BODY_BYTES} bytes")
-            chunks.append(chunk)
-    return json.loads(b"".join(chunks).decode("utf-8"))
+        return json.loads(_bounded_read(resp).decode("utf-8"))
 
 
-def _call_claude(metrics: dict[str, Any], api_key: str) -> str:
-    payload = json.dumps({
-        "model": MODEL,
-        "max_tokens": 400,
-        "messages": [{
-            "role": "user",
-            "content": PROMPT.format(metrics=json.dumps(metrics, indent=2)),
-        }],
-    }).encode("utf-8")
-
+def _with_retries(call) -> str:
     last_error: Exception | None = None
     for attempt in range(1, RETRIES + 1):
         try:
-            body = _request(payload, api_key)
-            text = "".join(block.get("text", "") for block in body.get("content", [])).strip()
-            if not text:
-                raise ValueError("API returned an empty narrative")
+            text = call()
+            if not text.strip():
+                raise ValueError("provider returned an empty narrative")
             return text
         except urllib.error.HTTPError as err:
             last_error = err
@@ -97,7 +86,39 @@ def _call_claude(metrics: dict[str, Any], api_key: str) -> str:
             log.warning("narrative attempt %d/%d failed (%s); retrying in %ds",
                         attempt, RETRIES, last_error, delay)
             time.sleep(delay)
-    raise RuntimeError(f"Claude API unavailable after {RETRIES} attempts: {last_error}")
+    raise RuntimeError(f"provider unavailable after {RETRIES} attempts: {last_error}")
+
+
+def _claude(prompt: str, api_key: str) -> str:
+    body = _post_json(ANTHROPIC_URL,
+                      {"model": MODEL, "max_tokens": 400,
+                       "messages": [{"role": "user", "content": prompt}]},
+                      {"x-api-key": api_key, "anthropic-version": "2023-06-01"})
+    return "".join(block.get("text", "") for block in body.get("content", []))
+
+
+def _ollama(prompt: str, host: str) -> str:
+    body = _post_json(f"{host.rstrip('/')}/api/generate",
+                      {"model": os.environ.get("OLLAMA_MODEL", "llama3.2"),
+                       "prompt": prompt, "stream": False}, {})
+    return str(body.get("response", ""))
+
+
+def ollama_host() -> str | None:
+    """The local Ollama server's base URL, or None when nothing answers.
+
+    The probe must never crash the report: a malformed OLLAMA_HOST (whitespace,
+    control characters, a bad port) reads as "no server", not as an exception.
+    """
+    host = os.environ.get("OLLAMA_HOST", "").strip() or OLLAMA_DEFAULT
+    if not host.startswith("http"):
+        host = "http://" + host
+    try:
+        with urllib.request.urlopen(f"{host.rstrip('/')}/api/tags", timeout=1) as resp:
+            resp.read(1)
+        return host
+    except (OSError, ValueError, http.client.HTTPException):
+        return None
 
 
 def _fmt_pct(pct: float | None) -> str:
@@ -130,15 +151,22 @@ MOCK_NOTE = ("[mock narrative] This run used --mock, so the summary below comes 
 
 
 def narrative(metrics: dict[str, Any], mock: bool = False) -> tuple[str, str]:
-    """Return (text, source) where source is one of: claude, mock, fallback."""
+    """Return (text, source) where source is one of: claude, ollama, mock, fallback."""
     if mock:
         return MOCK_NOTE + fallback_narrative(metrics), "mock"
+    prompt = PROMPT.format(metrics=json.dumps(metrics, indent=2))
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if not api_key:
-        log.warning("ANTHROPIC_API_KEY not set; using the deterministic fallback narrative")
-        return fallback_narrative(metrics), "fallback"
-    try:
-        return _call_claude(metrics, api_key), "claude"
-    except RuntimeError as err:
-        log.error("%s — falling back to the deterministic narrative", err)
-        return fallback_narrative(metrics), "fallback"
+    if api_key:
+        try:
+            return _with_retries(lambda: _claude(prompt, api_key)).strip(), "claude"
+        except RuntimeError as err:
+            log.error("%s — trying the next provider", err)
+    else:
+        log.warning("ANTHROPIC_API_KEY not set; trying Ollama, then the deterministic fallback")
+    host = ollama_host()
+    if host:
+        try:
+            return _with_retries(lambda: _ollama(prompt, host)).strip(), "ollama"
+        except RuntimeError as err:
+            log.error("%s — using the deterministic fallback", err)
+    return fallback_narrative(metrics), "fallback"

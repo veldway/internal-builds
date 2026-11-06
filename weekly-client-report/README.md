@@ -12,9 +12,9 @@ connector to the real source (Shopify Admin API, GA4, a warehouse export).
 ## Run it
 
 ```bash
-python3 report.py sample_data/acme_outdoor_week45.json --out out/          # uses Claude API if ANTHROPIC_API_KEY is set
+python3 report.py sample_data/acme_outdoor_week45.json --out out/          # Claude API → Ollama → fallback
 python3 report.py sample_data/acme_outdoor_week45.json --out out/ --mock  # fully offline, deterministic
-python3 -m unittest discover -s tests                                     # 19 tests
+python3 -m unittest discover -s tests                                     # 23 tests
 ```
 
 No dependencies beyond stock Python 3.11.
@@ -24,10 +24,11 @@ No dependencies beyond stock Python 3.11.
 - **Numbers and words are separated.** `metrics.py` is pure arithmetic — every figure
   in a report traces to the orders that produced it. The model (`narrate.py`) only
   writes the narrative and is explicitly told to use no number outside the metrics JSON.
-- **The pipeline cannot be taken down by the API.** Claude calls get timeouts, three
-  retries with backoff on retryable statuses (429/5xx), and on failure the report
-  still ships with a deterministic template narrative — the footer names which source
-  produced the words (`claude`, `mock`, or `fallback`).
+- **Pluggable providers, never a hard failure:** Claude API when `ANTHROPIC_API_KEY`
+  is set → local Ollama when a server answers (`OLLAMA_HOST` or localhost:11434) →
+  deterministic template narrative. Every call gets timeouts and three retries with
+  backoff on retryable statuses (429/5xx), and the footer names which source actually
+  produced the words (`claude`, `ollama`, `mock`, or `fallback`).
 - **Nothing sends by accident.** Default is dry-run; `--send` refuses to run unless
   all five SMTP environment variables are present.
 - **Bad input fails loudly.** Missing fields, malformed items, duplicate order ids,
