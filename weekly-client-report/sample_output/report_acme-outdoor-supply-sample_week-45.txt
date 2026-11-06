@@ -1,9 +1,9 @@
 Acme Outdoor Supply (sample) — weekly report, Week 45 (2026-11-02 to 2026-11-08)
 
-Revenue: USD 2,369.80   Orders: 13   AOV: USD 182.29
+Revenue: USD 2,292.40   Orders: 13   AOV: USD 176.34
 Sessions: 4,210   Conversion: 0.31%
 
-[mock narrative] This run used --mock, so the summary below comes from the deterministic template rather than the model. Acme Outdoor Supply (sample) took 13 orders for USD 2,369.80 in Week 45 (up 12.6% week-over-week). Average order value was USD 182.29 (up 3.9% week-over-week). The strongest product was 65L Trekking Pack (4 units, USD 1,156.00).
+[mock narrative] This run used --mock, so the summary below comes from the deterministic template rather than the model. Acme Outdoor Supply (sample) took 13 orders for USD 2,292.40 in Week 45 (up 8.9% week-over-week). Average order value was USD 176.34 (up 0.5% week-over-week). The strongest product was 65L Trekking Pack (4 units, USD 1,156.00).
 
 Top products:
   - 65L Trekking Pack: 4 units, USD 1,156.00

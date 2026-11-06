@@ -22,7 +22,9 @@ log = logging.getLogger("weekly-report")
 
 API_URL = "https://api.anthropic.com/v1/messages"
 MODEL = "claude-sonnet-5-5"
-TIMEOUT_S = 30
+TIMEOUT_S = 30          # socket-level timeout per read/connect
+TOTAL_DEADLINE_S = 60   # wall-clock bound for the whole request, body included
+MAX_BODY_BYTES = 1_000_000
 RETRIES = 3
 RETRYABLE = {429, 500, 502, 503, 504, 529}
 
@@ -47,8 +49,23 @@ def _request(payload: bytes, api_key: str) -> dict[str, Any]:
         },
         method="POST",
     )
+    # A socket timeout resets on every byte, so a trickling server could hold a
+    # plain read() open indefinitely. Bound the whole body by wall clock and size.
+    deadline = time.monotonic() + TOTAL_DEADLINE_S
+    chunks: list[bytes] = []
+    size = 0
     with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        while True:
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"response body exceeded the {TOTAL_DEADLINE_S}s deadline")
+            chunk = resp.read1(65536) if hasattr(resp, "read1") else resp.read(65536)
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > MAX_BODY_BYTES:
+                raise ValueError(f"response body exceeded {MAX_BODY_BYTES} bytes")
+            chunks.append(chunk)
+    return json.loads(b"".join(chunks).decode("utf-8"))
 
 
 def _call_claude(metrics: dict[str, Any], api_key: str) -> str:

@@ -3,6 +3,11 @@
 Everything here is plain arithmetic on the input file: no network, no model.
 The narrative layer (narrate.py) only ever sees the output of this module, so
 every number in a report can be traced back to the orders that produced it.
+
+Data semantics: an order's `total` is the amount actually charged, after any
+discount; `discount` states the reduction already included in it (informational).
+Revenue is therefore the sum of kept totals, with nothing subtracted twice.
+`previous_week.refund_value` is informational and not used in any calculation.
 """
 from __future__ import annotations
 
@@ -21,6 +26,9 @@ def validate(data: dict[str, Any]) -> None:
     for field in REQUIRED_TOP_LEVEL:
         if field not in data:
             raise InputError(f"input is missing required field {field!r}")
+    for field in ("label", "start", "end"):
+        if field not in data["week"]:
+            raise InputError(f"week is missing required field {field!r}")
     if not isinstance(data["orders"], list) or not data["orders"]:
         raise InputError("input has no orders; refusing to render an empty report")
     seen_ids: set[str] = set()
@@ -33,6 +41,16 @@ def validate(data: dict[str, Any]) -> None:
         seen_ids.add(order["id"])
         if order["total"] < 0:
             raise InputError(f"order {order['id']!r} has a negative total")
+        if not isinstance(order["items"], list) or not order["items"]:
+            raise InputError(f"order {order['id']!r} has no items")
+        for j, item in enumerate(order["items"]):
+            for field in ("title", "qty", "price"):
+                if field not in item:
+                    raise InputError(f"order {order['id']!r} item #{j} is missing {field!r}")
+            if not isinstance(item["qty"], (int, float)) or item["qty"] < 0:
+                raise InputError(f"order {order['id']!r} item #{j} has a bad qty")
+            if not isinstance(item["price"], (int, float)) or item["price"] < 0:
+                raise InputError(f"order {order['id']!r} item #{j} has a bad price")
 
 
 def _pct_change(current: float, previous: float) -> float | None:

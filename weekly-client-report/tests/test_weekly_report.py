@@ -70,6 +70,34 @@ class MetricsTest(unittest.TestCase):
         with self.assertRaises(metrics.InputError):
             metrics.compute(data)
 
+    def test_revenue_is_charged_amounts_with_no_double_discount(self):
+        # total is post-discount, so revenue = sum of kept totals exactly;
+        # the discount figure is informational and must not be subtracted again.
+        m = metrics.compute(sample_data())
+        kept_totals = round(sum(
+            o["total"] for o in sample_data()["orders"] if not o["refunded"]), 2)
+        self.assertEqual(m["revenue"], kept_totals)
+        self.assertEqual(m["discount_value"], 77.40)
+        discounted = next(o for o in sample_data()["orders"] if o["id"] == "A-1002")
+        list_price = sum(i["qty"] * i["price"] for i in discounted["items"])
+        self.assertEqual(discounted["total"], round(list_price - discounted["discount"], 2))
+
+    def test_week_subkeys_required(self):
+        data = sample_data()
+        del data["week"]["label"]
+        with self.assertRaises(metrics.InputError):
+            metrics.compute(data)
+
+    def test_malformed_item_is_refused_not_crashed(self):
+        data = sample_data()
+        del data["orders"][0]["items"][0]["price"]
+        with self.assertRaises(metrics.InputError):
+            metrics.compute(data)
+        data = sample_data()
+        data["orders"][0]["items"] = []
+        with self.assertRaises(metrics.InputError):
+            metrics.compute(data)
+
 
 class NarrateTest(unittest.TestCase):
     def test_mock_is_deterministic_and_labeled(self):
@@ -109,6 +137,28 @@ class NarrateTest(unittest.TestCase):
         self.assertEqual(source, "fallback")
         self.assertEqual(fake.call_count, 1)  # a 401 is not retried
 
+    def test_trickling_or_oversized_body_is_bounded_and_falls_back(self):
+        m = metrics.compute(sample_data())
+
+        class EndlessResponse:
+            def read1(self, n):
+                return b"x" * n  # never ends: must hit the size cap, not hang
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}), \
+             mock.patch.object(narrate.urllib.request, "urlopen",
+                               return_value=EndlessResponse()) as fake, \
+             mock.patch.object(narrate.time, "sleep"):
+            text, source = narrate.narrative(m)
+        self.assertEqual(source, "fallback")
+        self.assertEqual(fake.call_count, narrate.RETRIES)
+        self.assertTrue(text)
+
     def test_fallback_mentions_flags(self):
         m = metrics.compute(sample_data())
         if not m["flags"]:
@@ -126,6 +176,16 @@ class RenderTest(unittest.TestCase):
         self.assertIn("&lt;script&gt;", html_out)
         self.assertIn(f"{m['revenue']:,.2f}", html_out)
         self.assertIn("Narrative &amp; summary.", html_out)
+
+    def test_week_dates_and_currency_are_escaped(self):
+        m = metrics.compute(sample_data())
+        m["week"]["start"] = '<img src=x onerror=alert(1)>'
+        m["currency"] = '<b>USD</b>'
+        html_out = render.to_html(m, "n.", "mock")
+        self.assertNotIn("<img src=x", html_out)
+        self.assertNotIn("<b>USD</b>", html_out)
+        self.assertIn("&lt;img", html_out)
+        self.assertIn("&lt;b&gt;USD&lt;/b&gt;", html_out)
 
     def test_text_report_lists_top_products(self):
         m = metrics.compute(sample_data())

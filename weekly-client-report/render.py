@@ -54,9 +54,10 @@ def to_html(m: dict[str, Any], narrative: str, source: str) -> str:
              m["deltas"]["sessions_pct"]),
     ])
     rows = "".join(
-        f"<tr><td>{html.escape(p['title'])}</td>"
-        f"<td class='num'>{p['qty']}</td>"
-        f"<td class='num'>{cur} {p['revenue']:,.2f}</td></tr>"
+        "<tr><td>{title}</td><td class='num'>{qty}</td><td class='num'>{amount}</td></tr>".format(
+            title=html.escape(p["title"]),
+            qty=p["qty"],
+            amount=html.escape(f"{cur} {p['revenue']:,.2f}"))
         for p in m["top_products"])
     flags = "".join(f'<div class="flag">⚠ {html.escape(f)}</div>' for f in m["flags"])
     conversion = (f" · conversion {m['conversion_pct']}%" if m["conversion_pct"] is not None else "")
@@ -72,7 +73,7 @@ def to_html(m: dict[str, Any], narrative: str, source: str) -> str:
 <body><div class="card">
 <h1>{html.escape(m['store'])}</h1>
 <p class="sub">Weekly report · {html.escape(m['week']['label'])}
- ({m['week']['start']} → {m['week']['end']})</p>
+ ({html.escape(str(m['week']['start']))} → {html.escape(str(m['week']['end']))})</p>
 <div class="kpis">{kpis}</div>
 {flags}
 <p class="narr">{html.escape(narrative)}</p>
