@@ -37,4 +37,6 @@ deliberately doesn't exist in the demo.
 - **One bad lead never takes down the batch** — it's skipped with a visible
   "NOT TRIAGED" record, and duplicates are refused.
 
-`sample_output/` holds a committed example produced with `--mock`.
+`sample_output/` holds a committed example produced with `--mock`;
+`sample_output_ollama/` one produced live by a local llama3.2 via Ollama (no API
+key, no vendor) — the hostile lead still ends at spam/0 on the deterministic path.

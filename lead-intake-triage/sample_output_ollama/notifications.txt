@@ -1,0 +1,19 @@
+[HOT · 85] Priya Raman — Brightleaf Home · priya@brightleaf-home.example
+  why: service fit: inventory, shopify, sync; urgency language; budget named (~3,000); substantive message
+  summary (ollama): Priya Raman from Brightleaf Home is reaching out because their Shopify store's inventory sync with Cin7 is breaking and orders are overselling every weekend. They're looking for assistance within the next two weeks and are budgeted around $3,000.
+  draft reply (HUMAN REVIEWS BEFORE SENDING): Hi Priya, thanks for sharing your challenge with us. I've passed on your request for help with inventory sync issues to our support team. They'll be in touch soon to discuss possible solutions and timelines.
+
+[NURTURE · 25] Tom Ellison — Ellison Outfitters · tom@ellisonoutfitters.example
+  why: service fit: automation, klaviyo; substantive message
+  summary (ollama): Tom Ellison from Ellison Outfitters is interested in learning about your approach to Klaviyo automation, specifically how your service fits his needs. He is exploring options for next year and has no immediate deadline. Tom is looking for information on your retainers.
+  draft reply (HUMAN REVIEWS BEFORE SENDING): Hi Tom, thanks for reaching out! We'd love to help you explore how our service can support your Klaviyo automation goals. Can you tell me a bit more about what you're looking for in a service like ours?
+
+[HOT · 70] Dana Whitfield — Whitfield Digital (agency) · dana@agency-partner.example
+  why: service fit: shopify, theme; urgency language; came via referral; substantive message
+  summary (ollama): Dana Whitfield from Whitfield Digital (agency) is seeking a fixed quote for an urgent project. The client's Shopify theme needs a custom bundle builder section, and the deadline is this Friday. The lead was referred to us by Mal at Ecom Nation.
+  draft reply (HUMAN REVIEWS BEFORE SENDING): Hi Dana, thanks for referring us to this project. We're happy to help with the custom bundle builder section for your client's Shopify theme. We'll review the details and provide a fixed quote as soon as possible.
+
+[SPAM · 0] (no name) — =HYPERLINK("https://evil.example","SEO Blast") · winner@seo-blast.example
+  why: spam phrases in message; 3+ links in message; no sender name; prompt-injection phrasing in message
+  summary (fallback): The sender (=HYPERLINK("https://evil.example","SEO Blast")) wrote via contact-form. Rule triage: spam (score 0; spam phrases in message; 3+ links in message; no sender name; prompt-injection phrasing in message).
+  ⚠ message contained prompt-injection phrasing — treat with care

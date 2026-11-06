@@ -39,4 +39,6 @@ No dependencies beyond stock Python 3.11.
   trickling or oversized response can't hang the run — it falls back like any failure.
 - **Idempotent output.** Same input, same filenames; in `--mock`, byte-identical files.
 
-`sample_output/` holds a committed example produced with `--mock`.
+`sample_output/` holds a committed example produced with `--mock`;
+`sample_output_ollama/` one produced live by a local llama3.2 via Ollama
+(no API key, no vendor) — the footer names the source either way.

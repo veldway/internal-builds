@@ -35,7 +35,8 @@ PROMPT = """You are writing the summary paragraph of a weekly e-commerce report 
 agency sends its client. Using ONLY the JSON metrics below, write 3-5 sentences in
 plain, factual English: what revenue and orders did week-over-week, the strongest
 product, and anything in "flags". No advice unless a flag clearly implies one next
-step. Never invent a number that is not in the JSON.
+step. Never invent a number that is not in the JSON. Reply with the summary
+paragraph only — no preamble, no headings.
 
 Metrics:
 {metrics}"""

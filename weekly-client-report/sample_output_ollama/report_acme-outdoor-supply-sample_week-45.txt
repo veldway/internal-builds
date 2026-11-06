@@ -1,0 +1,13 @@
+Acme Outdoor Supply (sample) — weekly report, Week 45 (2026-11-02 to 2026-11-08)
+
+Revenue: USD 2,292.40   Orders: 13   AOV: USD 176.34
+Sessions: 4,210   Conversion: 0.31%
+
+This week, Acme Outdoor Supply saw revenue increase by 8.9% week-over-week, with a total of $2292.40 in sales. The top-selling product was the 65L Trekking Pack, accounting for 1156.00 in revenue, followed by the 2-Person Trail Tent. Notably, the refund value was 42.5, suggesting a need to review refund policies.
+
+Top products:
+  - 65L Trekking Pack: 4 units, USD 1,156.00
+  - 2-Person Trail Tent: 6 units, USD 779.40
+  - LED Camp Lantern: 6 units, USD 192.00
+  - Mini Camp Stove: 2 units, USD 170.00
+  - Insulated Bottle 1L: 1 units, USD 42.50
