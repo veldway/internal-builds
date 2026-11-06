@@ -2,9 +2,7 @@
 
 Working automation builds by [Veldway](https://veldway.com) — the internal builds
 behind our AI Automation service. Each directory is a small, genuinely runnable tool
-of the kind we build for clients; the full write-ups live on our site:
-[the weekly client report](https://veldway.com/work/weekly-client-report) and
-[lead-intake triage](https://veldway.com/work/lead-intake-triage).
+of the kind we build for clients; the full write-ups live on our site, under Work.
 
 **Honesty labeling:** these are internal demo builds on sample data, created to show
 how we engineer automations — input validation, retries, graceful fallbacks, tests,
